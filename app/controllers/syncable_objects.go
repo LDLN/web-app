@@ -25,7 +25,7 @@ import (
 	"labix.org/v2/mgo/bson"
 	"github.com/revel/revel"
 	"github.com/nu7hatch/gouuid"
-	"github.com/ldln/landline-basestation/app/routes"
+	"github.com/ldln/web-app/app/routes"
 )
 
 type SyncableObjects struct {
