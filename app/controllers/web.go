@@ -21,18 +21,14 @@ package controllers
 import (
 	"crypto/rand"
 	"crypto/rsa"
-	"crypto/sha256"
 	"crypto/x509"
-	"encoding/base64"
 	"encoding/hex"
 	"github.com/revel/revel"
 	"labix.org/v2/mgo"
 	"labix.org/v2/mgo/bson"
 	"strings"
 	"github.com/nu7hatch/gouuid"
-  "fmt"
-  "github.com/RNCryptor/RNCryptor-go"
-
+	"github.com/ldln/core/cryptoWrapper"
 )
 
 const salt = "Yp2iD6PcTwB6upati0bPw314GrFWhUy90BIvbJTj5ETbbE8CoViDDGsJS6YHMOBq4VlwW3V00GWUMbbV"
@@ -89,7 +85,7 @@ func (c Web) FirstTimeSetupAction(org_title, org_subtitle, org_mbtiles_file, org
 	if createDeployment(org_title, org_subtitle, org_mbtiles_file, org_map_center_lat, org_map_center_lon, org_map_zoom_min, org_map_zoom_max) {
 
 		// create new key for organization
-		skek := randString(32)
+		skek := cryptoWrapper.RandString(32)
 
 		// create first user account
 		if createUser(username, password, skek) {
@@ -157,19 +153,6 @@ func (c Web) Logout() revel.Result {
 	return c.Redirect(Web.LoginForm)
 }
 
-func hashPassword(username, password string) string {
-
-	ps := []string{password, username, salt}
-
-	// hashed_password
-	hash := sha256.New()
-	hash.Write([]byte(strings.Join(ps, "-")))
-	md := hash.Sum(nil)
-	hashed_password := hex.EncodeToString(md)
-
-	return hashed_password
-}
-
 func (c Web) LoginForm() revel.Result {
 
 	if checkIfSetupIsEligible() {
@@ -182,7 +165,7 @@ func (c Web) LoginForm() revel.Result {
 func (c Web) LoginAction(username, password string) revel.Result {
 
 	// hashed_password
-	hashed_password := hashPassword(username, password)
+	hashed_password := cryptoWrapper.HashPassword(username, password)
 
 	// connect to mongodb
 	session, err := mgo.Dial("localhost")
@@ -208,7 +191,7 @@ func (c Web) LoginAction(username, password string) revel.Result {
 			revel.TRACE.Println(err)
 			return c.Redirect(Web.LoginForm)
 		}
-		kek := string(decrypt(key, bdec))
+		kek := string(cryptoWrapper.Decrypt(key, bdec))
 
 		// decrypt rsa private
 		privenc, err := hex.DecodeString(result["encrypted_rsa_private"])
@@ -216,7 +199,7 @@ func (c Web) LoginAction(username, password string) revel.Result {
 			revel.TRACE.Println(err)
 			return c.Redirect(Web.LoginForm)
 		}
-		priva := decrypt(key, privenc)
+		priva := cryptoWrapper.Decrypt(key, privenc)
 		priv, err := x509.ParsePKCS1PrivateKey(priva)
 
 		revel.TRACE.Println("Login successful")
@@ -280,13 +263,13 @@ func (c Web) CreateUserAction(username, password, confirm_password string) revel
 func createUser(username, password, skek string) bool {
 
 	// hashed_password
-	hashed_password := hashPassword(username, password)
+	hashed_password := cryptoWrapper.HashPassword(username, password)
 
 	// encrypt kek
 	ps := []string{password, username, salt}
 	key := []byte(string([]rune(strings.Join(ps, "-"))[0:32]))
 	pkek := []byte(skek)
-	encrypted_kek := hex.EncodeToString(encrypt(key, pkek))
+	encrypted_kek := hex.EncodeToString(cryptoWrapper.Encrypt(key, pkek))
 
 	// generate rsa keypair for user
 	size := 1024
@@ -303,7 +286,7 @@ func createUser(username, password, skek string) bool {
 	revel.TRACE.Println(priv)
 
 	// encrypt rsa private keypair
-	encrypted_rsa_private := hex.EncodeToString(encrypt(key, x509.MarshalPKCS1PrivateKey(priv)))
+	encrypted_rsa_private := hex.EncodeToString(cryptoWrapper.Encrypt(key, x509.MarshalPKCS1PrivateKey(priv)))
 
 	// connect to mongodb
 	session, err := mgo.Dial("localhost")
@@ -328,61 +311,4 @@ func createUser(username, password, skek string) bool {
 	}
 
 	return true
-}
-
-// from: https://stackoverflow.com/questions/18817336/golang-encrypting-a-string-with-aes-and-base64
-
-// See recommended IV creation from ciphertext below
-//var iv = []byte{35, 46, 57, 24, 85, 35, 24, 74, 87, 35, 88, 98, 66, 32, 14, 05}
-
-func randString(n int) string {
-	const alphanum = "0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz"
-	var bytes = make([]byte, n)
-	rand.Read(bytes)
-	for i, b := range bytes {
-		bytes[i] = alphanum[b%byte(len(alphanum))]
-	}
-	return string(bytes)
-}
-
-func encodeBase64(b []byte) string {
-	return base64.StdEncoding.EncodeToString(b)
-}
-
-func decodeBase64(s string) []byte {
-	data, err := base64.StdEncoding.DecodeString(s)
-	if err != nil {
-		panic(err)
-	}
-	return data
-}
-
-//encrypt the text with the key provided
-//returns a byte array
-//For reference: http://crypto.stackexchange.com/questions/2476/cipher-feedback-mode
-func encrypt(key, text []byte) []byte {
-  revel.TRACE.Printf("source: %v\n", string(text))
-
-  encrypted, err := rncryptor.Encrypt(string(key), text)
-  if err != nil {
-    revel.TRACE.Printf("error encrypting data: %v", err)
-  } else {
-    fmt.Printf("encrypted: %v\n", string(encrypted))
-  }
-  
-  return encrypted
-}
-
-//decrypt the text as a byte array with the key provided
-//returns a byte array of the base64 decrypted text
-func decrypt(key, text []byte) []byte {
-  fmt.Printf(string(key))
-  decrypted, err := rncryptor.Decrypt(string(key), text)
-  if err != nil {
-		panic(err)
-	} else {
-    revel.TRACE.Printf("decrypted: %v\n", string(decrypted))
-	} 
-
-  return decrypted
 }

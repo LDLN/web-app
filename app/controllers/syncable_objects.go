@@ -26,6 +26,7 @@ import (
 	"github.com/revel/revel"
 	"github.com/nu7hatch/gouuid"
 	"github.com/ldln/web-app/app/routes"
+	"github.com/ldln/core/cryptoWrapper"
 )
 
 type SyncableObjects struct {
@@ -128,7 +129,7 @@ func (c SyncableObjects) CreateObjectAction(object_key string) revel.Result {
 	revel.TRACE.Println(key_values_string)
 	
 	// encrypt json string
-	kv_string_encrypted := hex.EncodeToString(encrypt([]byte(c.Session["kek"]), []byte(key_values_string)))
+	kv_string_encrypted := hex.EncodeToString(cryptoWrapper.Encrypt([]byte(c.Session["kek"]), []byte(key_values_string)))
 	revel.TRACE.Println(kv_string_encrypted)
 	
 	// test decrypt
@@ -136,7 +137,7 @@ func (c SyncableObjects) CreateObjectAction(object_key string) revel.Result {
 	if err != nil {
 		revel.TRACE.Println(err)
 	}
-	kv_plain := string(decrypt([]byte(c.Session["kek"]), kv_hex))
+	kv_plain := string(cryptoWrapper.Decrypt([]byte(c.Session["kek"]), kv_hex))
 	revel.TRACE.Println(kv_plain)
 	
 	// create object
@@ -197,7 +198,7 @@ func (c SyncableObjects) ViewObject(object_key, uuid string) revel.Result {
 	if err != nil {
 		revel.TRACE.Println(err)
 	}
-	kv_plain := string(decrypt([]byte(c.Session["kek"]), kv_hex))
+	kv_plain := string(cryptoWrapper.Decrypt([]byte(c.Session["kek"]), kv_hex))
 	revel.TRACE.Println(kv_plain)
 	
 	// convert string of json to json to map
@@ -255,7 +256,7 @@ func (c SyncableObjects) ListObjects(object_key string) revel.Result {
 		if err != nil {
 			revel.TRACE.Println(err)
 		}
-		kv_plain := decrypt([]byte(c.Session["kek"]), kv_hex)
+		kv_plain := cryptoWrapper.Decrypt([]byte(c.Session["kek"]), kv_hex)
 		
 		// unmarshal the json
 		var obj_json map[string]interface{}
