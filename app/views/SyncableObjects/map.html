@@ -130,7 +130,7 @@ html,
 							
 							
 							// map pin tooltip box
-							var popuphtml = "<b>Title:</b> "+kvp.Title+"<br>";
+							var popuphtml = "<h3>"+kvp.Title+"</h3>";
 							popuphtml += "<b>Note:</b> "+kvp['Note']+"<br>";
 							//popuphtml += "<b>Has Electricity:</b> <span class='label label-danger'></span><br>";
 							
@@ -326,7 +326,7 @@ html,
 		if(currentLocationMarker == null) {
 			currentLocationMarker = L.marker([lat, lng], {icon: locationDot}).addTo(map);
 			
-			var popuphtml = "<b>Current Location:</b><br> <span id='currentLocationPopup'>"+currentLocation+"</span>";
+			var popuphtml = "<h3>Current Location</h3><span id='currentLocationPopup'>"+currentLocation+"</span>";
 			currentLocationMarker.bindPopup(popuphtml);
 		} else {
 			var newLatLng = new L.LatLng(lat, lng);
