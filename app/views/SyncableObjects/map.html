@@ -67,8 +67,10 @@ html,
 	var response_message;
 	var markers = {'init': 'init'};
 	var object_list = {'init': 0};
+	var client_get_schemas_json = {'action': 'client_get_schemas'};
 	var client_diff_request_json = {'action': 'client_diff_request', 'dek': '{{.dek}}', 'object_uuids': object_list};
 	var tmp_geo = '';
+	var geoObjectFields = {'map_location': {}, 'current_location': {}};
 		
 	// Create a socket
 	var socket = new WebSocket('ws://'+window.location.hostname+':8080/ws');
@@ -82,37 +84,44 @@ html,
 		//console.log(response_message.client_unknown_objects);
 		
 		// loop through client_unknown_objects
-		if(response_message.client_unknown_objects != null && response_message.client_unknown_objects.length > 0) {
+		if(response_message.action == 'server_diff_response' && response_message.client_unknown_objects != null && response_message.client_unknown_objects.length > 0) {
+			console.log('Parsing server_diff_response');
 			for(var k in response_message.client_unknown_objects) {
 				if(object_list[response_message.client_unknown_objects[k].uuid]===undefined) {
 					
 					// populate object list
 					object_list[response_message.client_unknown_objects[k].uuid] = response_message.client_unknown_objects[k].time_modified_since_creation;
 					
-					// add to map pins
-					if(response_message.client_unknown_objects[k].key_value_pairs_plain.map_location != undefined) {
-
-						var kvp = response_message.client_unknown_objects[k].key_value_pairs_plain;
-						console.log(kvp);
-						
-						// get latlng from map_location
-						var latlng = kvp.map_location.split(',');
-						var lat = latlng[0];
-						var lng = latlng[1];
-						var marker = L.marker([lat, lng]).addTo(map);
-						
-						// map pin tooltip box
-						var popuphtml = "<b>Title:</b> "+kvp.Title+"<br>";
-						popuphtml += "<b>Note:</b> "+kvp['Note']+"<br>";
-						//popuphtml += "<b>Has Electricity:</b> <span class='label label-danger'></span><br>";
-						
-						popuphtml += "<hr />";
-						popuphtml += "<b>Geo:</b> "+kvp['map_location']+"<br>";
-						if(kvp['current_location'] != undefined) {
-							popuphtml += "<b>Recorded At:</b> "+kvp['current_location']+"<br>";
+					var syncObject = response_message.client_unknown_objects[k];
+					var kvp = syncObject.key_value_pairs_plain;					
+					
+					// get geo values
+					if(geoObjectFields.map_location.hasOwnProperty(syncObject.object_type)){
+						for(var maplocationLabelIndex in geoObjectFields.map_location[syncObject.object_type]) {
+							
+							var maplocationLabel = geoObjectFields.map_location[syncObject.object_type][maplocationLabelIndex];
+							
+							// get latlng from map_location
+							var latlng = kvp[maplocationLabel].split(',');
+							var lat = latlng[0];
+							var lng = latlng[1];
+							var marker = L.marker([lat, lng]).addTo(map);
+							
+							// map pin tooltip box
+							var popuphtml = "<b>Title:</b> "+kvp.Title+"<br>";
+							popuphtml += "<b>Note:</b> "+kvp['Note']+"<br>";
+							//popuphtml += "<b>Has Electricity:</b> <span class='label label-danger'></span><br>";
+							
+							popuphtml += "<hr />";
+							
+							popuphtml += "<b>"+maplocationLabel+":</b> "+kvp[maplocationLabel]+"<br>";
+							
+							if(kvp['current_location'] != undefined) {
+								popuphtml += "<b>Recorded At:</b> "+kvp['current_location']+"<br>";
+							}
+	
+							marker.bindPopup(popuphtml).openPopup();
 						}
-
-						marker.bindPopup(popuphtml).openPopup();
 					}
 				}
 			}
@@ -121,6 +130,29 @@ html,
 		// add item to known objects list
 		//console.log(object_list);
 		client_diff_request_json.object_uuids = object_list;
+		
+		// parse server_send_schemas and store references to map_locations and current_locations in geoObjectFields
+		if(response_message.action == 'server_send_schemas' && response_message.schemas != null && response_message.schemas.length > 0) {
+			console.log('Parsing server_send_schemas');
+			for(var k in response_message.schemas) {
+				var objectType = response_message.schemas[k];
+				var objectTypeName = response_message.schemas[k].object_key;
+				for(var l in objectType.schema) {
+					var objectTypeFieldObject = objectType.schema[l];
+					
+					var getType = objectTypeFieldObject.type;
+					if(getType == 'map_location' || getType == 'current_location') {
+						console.log(objectTypeName+"."+objectTypeFieldObject.label+" is a "+getType);
+						
+						if(!geoObjectFields[getType].hasOwnProperty(objectTypeName)) {
+							geoObjectFields[getType][objectTypeName] = [];
+						}
+						geoObjectFields[getType][objectTypeName].push(objectTypeFieldObject.label);
+					}
+				}
+			}
+			console.log(geoObjectFields);
+		}
     }
 
 	// Make the function wait until the connection is made...
@@ -142,16 +174,32 @@ html,
 	        }, 5); // wait 5 milisecond for the connection...
 	}
 	
-	// Sync
+	// Sync Objects
 	function getMapPins()
 	{
-		console.log("Getting map pins");
-		$("#requestDebug").html(JSON.stringify(client_diff_request_json, null, 4));
-		socket.send(JSON.stringify(client_diff_request_json));
+		sendWSRequest("client_diff_request");
+	}
+	
+	// Sync Schema
+	function getSchemas()
+	{
+		sendWSRequest("client_get_schemas");
+	}
+	
+	// websocket request
+	function sendWSRequest(action)
+	{
+		console.log("Requesting "+action);
+		var jsonBody = eval(action+"_json");
+		
+		$("#requestDebug").html(JSON.stringify(jsonBody, null, 4));
+		socket.send(JSON.stringify(jsonBody));
 	}
 	
 	// Initiate map pin sync on socket open
 	waitForSocketConnection(socket, function(){
+		getSchemas();
+		
 		getMapPins();
 		setInterval(getMapPins, 8000);
 		
@@ -226,7 +274,7 @@ html,
 		if(currentLocationMarker == null) {
 			currentLocationMarker = L.marker([lat, lng], {icon: locationDot}).addTo(map);
 			
-			var popuphtml = "<center><b>Current Location:</b><br> <span id='currentLocationPopup'>"+currentLocation+"</span></center>";
+			var popuphtml = "<b>Current Location:</b><br> <span id='currentLocationPopup'>"+currentLocation+"</span>";
 			currentLocationMarker.bindPopup(popuphtml);
 		} else {
 			var newLatLng = new L.LatLng(lat, lng);
