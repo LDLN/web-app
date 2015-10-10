@@ -91,17 +91,27 @@ html,
 					
 					// add to map pins
 					if(response_message.client_unknown_objects[k].key_value_pairs_plain.map_location != undefined) {
+
+						var kvp = response_message.client_unknown_objects[k].key_value_pairs_plain;
+						console.log(kvp);
 						
-						var latlng = response_message.client_unknown_objects[k].key_value_pairs_plain.map_location.split(',');
+						// get latlng from map_location
+						var latlng = kvp.map_location.split(',');
 						var lat = latlng[0];
 						var lng = latlng[1];
 						var marker = L.marker([lat, lng]).addTo(map);
 						
 						// map pin tooltip box
-						console.log(response_message.client_unknown_objects[k].key_value_pairs_plain);
-						var popuphtml = "<b>Title:</b> "+response_message.client_unknown_objects[k].key_value_pairs_plain.Title+"<br>";
-						popuphtml += "<b>Note:</b> "+response_message.client_unknown_objects[k].key_value_pairs_plain['Note']+"<br>";
+						var popuphtml = "<b>Title:</b> "+kvp.Title+"<br>";
+						popuphtml += "<b>Note:</b> "+kvp['Note']+"<br>";
 						//popuphtml += "<b>Has Electricity:</b> <span class='label label-danger'></span><br>";
+						
+						popuphtml += "<hr />";
+						popuphtml += "<b>Geo:</b> "+kvp['map_location']+"<br>";
+						if(kvp['current_location'] != undefined) {
+							popuphtml += "<b>Recorded At:</b> "+kvp['current_location']+"<br>";
+						}
+
 						marker.bindPopup(popuphtml).openPopup();
 					}
 				}
@@ -144,10 +154,14 @@ html,
 	waitForSocketConnection(socket, function(){
 		getMapPins();
 		setInterval(getMapPins, 8000);
+		
+		getLocation();
+		setInterval(getLocation, 10000);
 	});
 	
 	// create map
 	var map = L.map('map2').setView([{{.deployment.map_center_lat}}, {{.deployment.map_center_lon}}], {{.deployment.map_zoom_min}});
+	
 	L.tileLayer('http://'+window.location.hostname+':8888/v2/{{.deployment.map_mbtiles}}/{z}/{x}/{y}.png', {
     	attribution: 'Map data &copy; <a href="http://openstreetmap.org">OpenStreetMap</a> contributors, <a href="http://creativecommons.org/licenses/by-sa/2.0/">CC-BY-SA</a>, Hosted by <a href="http://ldln.co">LDLN</a>',
     	maxZoom: {{.deployment.map_zoom_max}}
@@ -164,6 +178,7 @@ html,
 		$( "#createBox .modal-body" ).load( "/types/poi/create?hide_chrome=true", function() {
 			
 			$("input.map_location").val(tmp_geo.lat+","+tmp_geo.lng);
+			$("input.current_location").val(currentLocation);
 			
 			$("#createBox .modal-body form .form-group:first-child div input").focus();
 			
@@ -182,6 +197,44 @@ html,
 		    });
 		});
 	});
+	
+	function getLocation() {
+	    if (navigator.geolocation) {
+	        navigator.geolocation.getCurrentPosition(showPosition);
+	    } else {
+	        console.log("Geolocation is not supported by this browser.");
+	    }
+	}
+	var currentLocation = null;
+	var currentLocationMarker = null;
+	function showPosition(position) {
+		currentLocation = position.coords.latitude + "," + position.coords.longitude;
+		console.log("currentLocation: " + currentLocation);
+		
+		var locationDot = L.icon({
+		    iconUrl: '/public/img/current_location_dot.png',
+		    iconRetinaUrl: '/public/img/current_location_dot.png',
+		    iconSize: [20, 20],
+		    iconAnchor: [10, 10],
+		    popupAnchor: [0, 0]
+		});
+
+		var latlng = currentLocation.split(',');
+		var lat = latlng[0];
+		var lng = latlng[1];
+		
+		if(currentLocationMarker == null) {
+			currentLocationMarker = L.marker([lat, lng], {icon: locationDot}).addTo(map);
+			
+			var popuphtml = "<center><b>Current Location:</b><br> <span id='currentLocationPopup'>"+currentLocation+"</span></center>";
+			currentLocationMarker.bindPopup(popuphtml);
+		} else {
+			var newLatLng = new L.LatLng(lat, lng);
+			currentLocationMarker.setLatLng(newLatLng);
+			
+			$('#currentLocationPopup').html(currentLocation);
+		}
+	}
 	
 </script>
 
