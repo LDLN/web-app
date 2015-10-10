@@ -11,22 +11,22 @@ html,
 }
 .container-fluid .row,
 .container-fluid .row .main {
-	width:110%;
+	/*width:110%;*/
 }
 #map2 {
-	position:relative; 
+	/*position:relative; 
 	left:-20px;
-	width:100%; 
+	width:100%; */
 	height:100%;
 }
 @media (min-width: 768px) {
 	.container-fluid .row,
 	.container-fluid .row .main {
-		width:100%;
+		/*width:100%;*/
 	}
 	#map2 {
-		position:relative; 
-		left:-40px;
+		/*position:relative; 
+		left:-40px;*/
 	}
 }
 </style>
@@ -71,6 +71,8 @@ html,
 	var client_diff_request_json = {'action': 'client_diff_request', 'dek': '{{.dek}}', 'object_uuids': object_list};
 	var tmp_geo = '';
 	var geoObjectFields = {'map_location': {}, 'current_location': {}};
+	var mapLayers = {};
+	var schemaKeyToLabel = {};
 		
 	// Create a socket
 	var socket = new WebSocket('ws://'+window.location.hostname+':8080/ws');
@@ -105,7 +107,7 @@ html,
 							var latlng = kvp[maplocationLabel].split(',');
 							var lat = latlng[0];
 							var lng = latlng[1];
-							var marker = L.marker([lat, lng]).addTo(map);
+							var marker = L.marker([lat, lng]);
 							
 							// map pin tooltip box
 							var popuphtml = "<b>Title:</b> "+kvp.Title+"<br>";
@@ -120,7 +122,7 @@ html,
 								popuphtml += "<b>Recorded At:</b> "+kvp['current_location']+"<br>";
 							}
 	
-							marker.bindPopup(popuphtml).openPopup();
+							marker.bindPopup(popuphtml).openPopup().addTo(mapLayers[schemaKeyToLabel[syncObject.object_type]]);
 						}
 					}
 				}
@@ -134,9 +136,13 @@ html,
 		// parse server_send_schemas and store references to map_locations and current_locations in geoObjectFields
 		if(response_message.action == 'server_send_schemas' && response_message.schemas != null && response_message.schemas.length > 0) {
 			console.log('Parsing server_send_schemas');
+			
 			for(var k in response_message.schemas) {
 				var objectType = response_message.schemas[k];
 				var objectTypeName = response_message.schemas[k].object_key;
+				var objectTypeLabel = response_message.schemas[k].object_label;
+				schemaKeyToLabel[objectTypeName] = objectTypeLabel;
+				var isGeo = false;
 				for(var l in objectType.schema) {
 					var objectTypeFieldObject = objectType.schema[l];
 					
@@ -148,9 +154,20 @@ html,
 							geoObjectFields[getType][objectTypeName] = [];
 						}
 						geoObjectFields[getType][objectTypeName].push(objectTypeFieldObject.label);
+						
+						isGeo = true;
 					}
 				}
+				
+				if(isGeo) {
+					mapLayers[objectTypeLabel] = new L.LayerGroup();
+					map.addLayer(mapLayers[objectTypeLabel]);
+				}
 			}
+			
+			
+			L.control.layers(null, mapLayers).addTo(map);
+			
 			console.log(geoObjectFields);
 		}
     }
