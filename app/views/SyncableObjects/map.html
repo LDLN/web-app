@@ -1,6 +1,7 @@
 {{set . "title" "Map"}}
 {{template "header.html" .}}
 
+<link rel="stylesheet" href="/public/Leaflet.awesome-markers/dist/leaflet.awesome-markers.css">
 <style>
 body, 
 html,
@@ -63,6 +64,7 @@ html,
 
 <link rel="stylesheet" href="/public/css/leaflet.css" />
 <script src="/public/js/leaflet.js"></script>
+<script src="/public/Leaflet.awesome-markers/dist/leaflet.awesome-markers.min.js"></script>
 <script>
 	var response_message;
 	var markers = {'init': 'init'};
@@ -70,7 +72,7 @@ html,
 	var client_get_schemas_json = {'action': 'client_get_schemas'};
 	var client_diff_request_json = {'action': 'client_diff_request', 'dek': '{{.dek}}', 'object_uuids': object_list};
 	var tmp_geo = '';
-	var geoObjectFields = {'map_location': {}, 'current_location': {}};
+	var geoObjectFields = {'map_location': {}, 'current_location': {}, 'icon': {}};
 	var mapLayers = {};
 	var schemaKeyToLabel = {};
 		
@@ -98,7 +100,7 @@ html,
 					var kvp = syncObject.key_value_pairs_plain;					
 					
 					// get geo values
-					if(geoObjectFields.map_location.hasOwnProperty(syncObject.object_type)){
+					if(geoObjectFields.hasOwnProperty('map_location') && geoObjectFields.map_location.hasOwnProperty(syncObject.object_type)){
 						for(var maplocationLabelIndex in geoObjectFields.map_location[syncObject.object_type]) {
 							
 							var maplocationLabel = geoObjectFields.map_location[syncObject.object_type][maplocationLabelIndex];
@@ -107,7 +109,25 @@ html,
 							var latlng = kvp[maplocationLabel].split(',');
 							var lat = latlng[0];
 							var lng = latlng[1];
-							var marker = L.marker([lat, lng]);
+							var marker = null;
+							
+							if(geoObjectFields.hasOwnProperty('icon') && geoObjectFields.icon.hasOwnProperty(syncObject.object_type) 
+								&& kvp[geoObjectFields.icon[syncObject.object_type][maplocationLabelIndex]] != null
+								&& kvp[geoObjectFields.icon[syncObject.object_type][maplocationLabelIndex]] != ""){
+							
+								var iconLabel = geoObjectFields.icon[syncObject.object_type][maplocationLabelIndex];
+								var awesomeIcon = L.AwesomeMarkers.icon({
+									icon: kvp[iconLabel],
+									markerColor: 'darkblue',
+									iconColor: 'white',
+									spin: false
+								});
+								marker = L.marker([lat, lng], {icon: awesomeIcon});
+							} else {
+								
+								marker = L.marker([lat, lng]);
+							}
+							
 							
 							// map pin tooltip box
 							var popuphtml = "<b>Title:</b> "+kvp.Title+"<br>";
@@ -156,6 +176,13 @@ html,
 						geoObjectFields[getType][objectTypeName].push(objectTypeFieldObject.label);
 						
 						isGeo = true;
+					}
+					if(getType == 'icon') {
+						
+						if(!geoObjectFields[getType].hasOwnProperty(objectTypeName)) {
+							geoObjectFields[getType][objectTypeName] = [];
+						}
+						geoObjectFields[getType][objectTypeName].push(objectTypeFieldObject.label);
 					}
 				}
 				
