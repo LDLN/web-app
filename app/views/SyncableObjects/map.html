@@ -258,7 +258,7 @@ html,
 	var map = L.map('main-content-area').setView([{{.deployment.map_center_lat}}, {{.deployment.map_center_lon}}], {{.deployment.map_zoom_min}});
 	$("#main-content-area h1.page-header").hide();
 	
-	L.tileLayer('http://'+window.location.hostname+':8888/v2/{{.deployment.map_mbtiles}}/{z}/{x}/{y}.png', {
+	L.tileLayer('http://'+window.location.hostname+':8888/{{.deployment.map_mbtiles}}/{z}/{x}/{y}.png', {
     	attribution: 'Map data &copy; <a href="http://openstreetmap.org">OpenStreetMap</a> contributors, <a href="http://creativecommons.org/licenses/by-sa/2.0/">CC-BY-SA</a>, Hosted by <a href="http://ldln.co">LDLN</a>',
     	maxZoom: {{.deployment.map_zoom_max}}
 	}).addTo(map);
