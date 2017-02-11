@@ -74,7 +74,7 @@ func (c Web) FirstTimeSetupForm() revel.Result {
 	return c.Render()
 }
 
-func (c Web) FirstTimeSetupAction(org_title, org_subtitle, org_mbtiles_file, org_map_center_lat, org_map_center_lon, org_map_zoom_min, org_map_zoom_max, username, password, confirm_password string) revel.Result {
+func (c Web) FirstTimeSetupAction(org_title, org_subtitle, org_mbtiles_file, org_map_center_lat, org_map_center_lon, org_map_zoom_min, org_map_zoom_max, org_enc_is_on, username, password, confirm_password string) revel.Result {
 
 	if !checkIfSetupIsEligible() {
 		c.Flash.Error("Basestation is already setup")
@@ -82,7 +82,7 @@ func (c Web) FirstTimeSetupAction(org_title, org_subtitle, org_mbtiles_file, org
 	}
 
 	// create deployment
-	if createDeployment(org_title, org_subtitle, org_mbtiles_file, org_map_center_lat, org_map_center_lon, org_map_zoom_min, org_map_zoom_max) {
+	if createDeployment(org_title, org_subtitle, org_mbtiles_file, org_map_center_lat, org_map_center_lon, org_map_zoom_min, org_map_zoom_max, org_enc_is_on) {
 
 		// create new key for organization
 		skek := cryptoWrapper.RandString(32)
@@ -101,7 +101,7 @@ func (c Web) FirstTimeSetupAction(org_title, org_subtitle, org_mbtiles_file, org
 	return c.Redirect(Web.LoginForm)
 }
 
-func createDeployment(org_title, org_subtitle, org_mbtiles_file, org_map_center_lat, org_map_center_lon, org_map_zoom_min, org_map_zoom_max string) bool {
+func createDeployment(org_title, org_subtitle, org_mbtiles_file, org_map_center_lat, org_map_center_lon, org_map_zoom_min, org_map_zoom_max string, org_enc_is_on bool) bool {
 
 	// connect to mongodb
 	session, err := mgo.Dial("localhost")
@@ -124,6 +124,7 @@ func createDeployment(org_title, org_subtitle, org_mbtiles_file, org_map_center_
 	deployment_object_map["map_zoom_min"] = org_map_zoom_min
 	deployment_object_map["map_zoom_max"] = org_map_zoom_max
 	deployment_object_map["map_mbtiles"] = org_mbtiles_file
+	deployment_object_map["enc_is_on"] = org_enc_is_on
 
 	err = dbu.Insert(deployment_object_map)
 	if err != nil {

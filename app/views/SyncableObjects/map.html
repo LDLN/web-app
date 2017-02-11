@@ -70,7 +70,11 @@ html,
 	var markers = {'init': 'init'};
 	var object_list = {'init': 0};
 	var client_get_schemas_json = {'action': 'client_get_schemas'};
+	{{ if .deployment.enc_is_on }}
 	var client_diff_request_json = {'action': 'client_diff_request', 'dek': '{{.dek}}', 'object_uuids': object_list};
+	{{ else }}
+	var client_diff_request_json = {'action': 'client_diff_request', 'object_uuids': object_list};
+	{{ end }}
 	var tmp_geo = '';
 	var geoObjectFields = {'map_location': {}, 'current_location': {}, 'icon': {}};
 	var mapLayers = {};
