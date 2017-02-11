@@ -83,13 +83,13 @@ func (c Web) FirstTimeSetupAction(org_title, org_subtitle, org_mbtiles_file, org
 	}
 
 	// convert enc to bool
-	org_enc_is_on, err := strconv.ParseBool(org_enc_is_on)
+	org_enc_is_on_bool, err := strconv.ParseBool(org_enc_is_on)
 	if err != nil {
 		panic(err)
 	}
 
 	// create deployment
-	if createDeployment(org_title, org_subtitle, org_mbtiles_file, org_map_center_lat, org_map_center_lon, org_map_zoom_min, org_map_zoom_max, org_enc_is_on) {
+	if createDeployment(org_title, org_subtitle, org_mbtiles_file, org_map_center_lat, org_map_center_lon, org_map_zoom_min, org_map_zoom_max, org_enc_is_on_bool) {
 
 		// create new key for organization
 		skek := cryptoWrapper.RandString(32)

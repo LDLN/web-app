@@ -109,6 +109,13 @@ func (c SyncableObjects) CreateObjectAction(object_key string) revel.Result {
 	
 	revel.TRACE.Println(c.Params.Values)
 
+	// connect to mongodb
+	session, err := mgo.Dial("localhost")
+	if err != nil {
+		panic(err)
+	}
+	defer session.Close()
+
 	// find the deployment
 	dbd := session.DB("landline").C("Deployments")
 	var deployment map[string]string
