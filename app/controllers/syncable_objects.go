@@ -140,7 +140,7 @@ func (c SyncableObjects) CreateObjectAction(object_key string) revel.Result {
 	object_map["object_type"] = object_key
 	object_map["time_modified_since_creation"] = float64(0)
 
-	if deployment.enc_is_on {
+	if deployment["enc_is_on"] {
 		// encrypt json string
 		kv_string_encrypted := hex.EncodeToString(cryptoWrapper.Encrypt([]byte(c.Session["kek"]), []byte(key_values_string)))
 		revel.TRACE.Println(kv_string_encrypted)
