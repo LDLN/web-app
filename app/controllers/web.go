@@ -110,7 +110,7 @@ func createDeployment(org_title, org_subtitle, org_mbtiles_file, org_map_center_
 	}
 	defer session.Close()
 
-	// save user object
+	// save deployment object
 	dbu := session.DB("landline").C("Deployments")
 
 	// create object
