@@ -101,7 +101,7 @@ html,
 					object_list[response_message.client_unknown_objects[k].uuid] = response_message.client_unknown_objects[k].time_modified_since_creation;
 					
 					var syncObject = response_message.client_unknown_objects[k];
-					var kvp = syncObject.key_value_pairs_plain;					
+					var kvp = syncObject.key_value_pairs;					
 					
 					// get geo values
 					if(geoObjectFields.hasOwnProperty('map_location') && geoObjectFields.map_location.hasOwnProperty(syncObject.object_type)){

@@ -262,21 +262,36 @@ func (c SyncableObjects) ListObjects(object_key string) revel.Result {
 		syncable_object_map["uuid"] = result["uuid"]
 		syncable_object_map["object_type"] = result["object_type"]
 		syncable_object_map["time_modified_since_creation"] = result["time_modified_since_creation"]
-			
-		// decrypt
-		kv_hex, err := hex.DecodeString(result["key_value_pairs"].(string))
-		if err != nil {
-			revel.TRACE.Println(err)
-		}
-		kv_plain := cryptoWrapper.Decrypt([]byte(c.Session["kek"]), kv_hex)
 		
-		// unmarshal the json
-		var obj_json map[string]interface{}
-		if err := json.Unmarshal(kv_plain, &obj_json); err != nil {
-			panic(err)
-		}
+		// find the deployment
+		dbd := session.DB("landline").C("Deployments")
+		var deployment map[string]string
+		err = dbd.Find(bson.M{}).One(&deployment)
 
-		syncable_object_map["key_value_pairs_plain"] = obj_json
+		if deployment["enc_is_on"] == "True" {	
+			// decrypt
+			kv_hex, err := hex.DecodeString(result["key_value_pairs"].(string))
+			if err != nil {
+				revel.TRACE.Println(err)
+			}
+			kv_plain := cryptoWrapper.Decrypt([]byte(c.Session["kek"]), kv_hex)
+			
+			// unmarshal the json
+			var obj_json map[string]interface{}
+			if err := json.Unmarshal(kv_plain, &obj_json); err != nil {
+				panic(err)
+			}
+
+			syncable_object_map["key_value_pairs"] = obj_json
+		} else {
+			// unmarshal the json
+			var obj_json map[string]interface{}
+			if err := json.Unmarshal(result["key_value_pairs"].(string), &obj_json); err != nil {
+				panic(err)
+			}
+			
+			syncable_object_map["key_value_pairs"] = obj_json
+		}
 
 		object_list = append(object_list, syncable_object_map)
 	}

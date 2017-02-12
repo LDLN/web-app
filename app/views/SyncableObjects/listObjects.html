@@ -15,7 +15,7 @@
 	{{range $index, $element := .object_list}}
 		<tr>
 			<td><a href="/types/{{$element.object_type}}/{{$element.uuid}}">{{$element.uuid}}</a></td>
-			<td>{{$element.key_value_pairs_plain}}</td>
+			<td>{{$element.key_value_pairs}}</td>
 			<td></td>
 		</tr>
 	{{end}}
