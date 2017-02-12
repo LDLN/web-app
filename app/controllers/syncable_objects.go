@@ -205,13 +205,16 @@ func (c SyncableObjects) ViewObject(object_key, uuid string) revel.Result {
 	}
 	revel.TRACE.Println(object)
 	
-	// decrypt key_value_pairs
-	kv_hex, err := hex.DecodeString(object["key_value_pairs"])
-	if err != nil {
-		revel.TRACE.Println(err)
+	kv_plain := object["key_value_pairs"]
+	if deployment["enc_is_on"] == "True" {
+		// decrypt key_value_pairs
+		kv_hex, err := hex.DecodeString(object["key_value_pairs"])
+		if err != nil {
+			revel.TRACE.Println(err)
+		}
+		kv_plain = string(cryptoWrapper.Decrypt([]byte(c.Session["kek"]), kv_hex))
+		revel.TRACE.Println(kv_plain)
 	}
-	kv_plain := string(cryptoWrapper.Decrypt([]byte(c.Session["kek"]), kv_hex))
-	revel.TRACE.Println(kv_plain)
 	
 	// convert string of json to json to map
 	byt := []byte((kv_plain))
@@ -289,7 +292,7 @@ func (c SyncableObjects) ListObjects(object_key string) revel.Result {
 			if err := json.Unmarshal(result["key_value_pairs"].([]byte), &obj_json); err != nil {
 				panic(err)
 			}
-			
+
 			syncable_object_map["key_value_pairs"] = obj_json
 		}
 
