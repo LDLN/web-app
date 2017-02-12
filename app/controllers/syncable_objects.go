@@ -163,6 +163,12 @@ func (c SyncableObjects) CreateObjectAction(object_key string) revel.Result {
 		// add encrypted key-value pairs to the syncable object
 		object_map["key_value_pairs"] = kv_string_encrypted
 	} else {
+		// unmarshal the json
+		var obj_json map[string]interface{}
+		if err := json.Unmarshal(result["key_value_pairs"].([]byte), &obj_json); err != nil {
+			panic(err)
+		}
+
 		// add plaintext key-value pairs to the syncable object
 		object_map["key_value_pairs"] = key_values_string
 	}
