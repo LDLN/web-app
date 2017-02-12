@@ -29,7 +29,6 @@ import (
 	"strings"
 	"github.com/nu7hatch/gouuid"
 	"github.com/ldln/core/cryptoWrapper"
-	"strconv"
 )
 
 const salt = "Yp2iD6PcTwB6upati0bPw314GrFWhUy90BIvbJTj5ETbbE8CoViDDGsJS6YHMOBq4VlwW3V00GWUMbbV"
@@ -102,7 +101,7 @@ func (c Web) FirstTimeSetupAction(org_title, org_subtitle, org_mbtiles_file, org
 	return c.Redirect(Web.LoginForm)
 }
 
-func createDeployment(org_title, org_subtitle, org_mbtiles_file, org_map_center_lat, org_map_center_lon, org_map_zoom_min, org_map_zoom_max string, org_enc_is_on bool) bool {
+func createDeployment(org_title, org_subtitle, org_mbtiles_file, org_map_center_lat, org_map_center_lon, org_map_zoom_min, org_map_zoom_max, org_enc_is_on string) bool {
 
 	// connect to mongodb
 	session, err := mgo.Dial("localhost")
