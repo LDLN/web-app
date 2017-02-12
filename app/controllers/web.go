@@ -82,14 +82,8 @@ func (c Web) FirstTimeSetupAction(org_title, org_subtitle, org_mbtiles_file, org
 		return c.Redirect(Web.LoginForm)
 	}
 
-	// convert enc to bool
-	org_enc_is_on_bool, err := strconv.ParseBool(org_enc_is_on)
-	if err != nil {
-		panic(err)
-	}
-
 	// create deployment
-	if createDeployment(org_title, org_subtitle, org_mbtiles_file, org_map_center_lat, org_map_center_lon, org_map_zoom_min, org_map_zoom_max, org_enc_is_on_bool) {
+	if createDeployment(org_title, org_subtitle, org_mbtiles_file, org_map_center_lat, org_map_center_lon, org_map_zoom_min, org_map_zoom_max, org_enc_is_on) {
 
 		// create new key for organization
 		skek := cryptoWrapper.RandString(32)
