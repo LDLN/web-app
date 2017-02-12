@@ -164,7 +164,7 @@ func (c SyncableObjects) CreateObjectAction(object_key string) revel.Result {
 		object_map["key_value_pairs"] = kv_string_encrypted
 	} else {
 		// add plaintext key-value pairs to the syncable object
-		object_map["key_value_pairs"] = key_values
+		object_map["key_value_pairs"] = key_values_string
 	}
 	
 	// insert into db
