@@ -286,10 +286,10 @@ func (c SyncableObjects) ListObjects(object_key string) revel.Result {
 		} else {
 			// unmarshal the json
 			var obj_json map[string]interface{}
-			if err := json.Unmarshal(result["key_value_pairs"].(string), &obj_json); err != nil {
+			if err := json.Unmarshal(result["key_value_pairs"], &obj_json); err != nil {
 				panic(err)
 			}
-			
+
 			syncable_object_map["key_value_pairs"] = obj_json
 		}
 
