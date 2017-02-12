@@ -205,6 +205,11 @@ func (c SyncableObjects) ViewObject(object_key, uuid string) revel.Result {
 	}
 	revel.TRACE.Println(object)
 	
+	// find the deployment
+	dbd := session.DB("landline").C("Deployments")
+	var deployment map[string]string
+	err = dbd.Find(bson.M{}).One(&deployment)
+
 	kv_plain := object["key_value_pairs"]
 	if deployment["enc_is_on"] == "True" {
 		// decrypt key_value_pairs
