@@ -136,10 +136,10 @@ func createDeployment(org_title, org_subtitle, org_mbtiles_file, org_map_center_
 
 func (c Web) requireAuth() bool {
 	if c.Session["username"] == "" || c.Session["kek"] == "" {
-		revel.TRACE.Println("User not authd")
+		revel.AppLog.Debug("Debug: ", "User not authd")
 		return false
 	}
-	revel.TRACE.Println("User authd")
+	revel.AppLog.Debug("Debug: ", "User authd")
 	return true
 }
 
@@ -181,7 +181,7 @@ func (c Web) LoginAction(username, password string) revel.Result {
 	err = dbu.Find(bson.M{"username": username, "hashed_password": hashed_password}).One(&result)
 
 	if err != nil {
-		revel.TRACE.Println("Username and password not found")
+		revel.AppLog.Debug("Debug: ", "Username and password not found")
 	} else {
 
 		// decrypt kek
@@ -189,7 +189,7 @@ func (c Web) LoginAction(username, password string) revel.Result {
 		key := []byte(string([]rune(strings.Join(ps, "-"))[0:32]))
 		bdec, err := hex.DecodeString(result["encrypted_kek"])
 		if err != nil {
-			revel.TRACE.Println(err)
+			revel.AppLog.Debug("Debug: ", err)
 			return c.Redirect(Web.LoginForm)
 		}
 		kek := string(cryptoWrapper.Decrypt(key, bdec))
@@ -197,16 +197,16 @@ func (c Web) LoginAction(username, password string) revel.Result {
 		// decrypt rsa private
 		privenc, err := hex.DecodeString(result["encrypted_rsa_private"])
 		if err != nil {
-			revel.TRACE.Println(err)
+			revel.AppLog.Debug("Debug: ", err)
 			return c.Redirect(Web.LoginForm)
 		}
 		priva := cryptoWrapper.Decrypt(key, privenc)
 		priv, err := x509.ParsePKCS1PrivateKey(priva)
 
-		revel.TRACE.Println("Login successful")
-		revel.TRACE.Println(username)
-		revel.TRACE.Println(kek)
-		revel.TRACE.Println(priv)
+		revel.AppLog.Debug("Debug: ", "Login successful")
+		revel.AppLog.Debug("Debug: ", username)
+		revel.AppLog.Debug("Debug: ", kek)
+		revel.AppLog.Debug("Debug: ", priv)
 
 		// get deployment
 		dbd := session.DB("landline").C("Deployments")
@@ -247,7 +247,11 @@ func (c Web) CreateUserAction(username, password, confirm_password string) revel
 		c.Flash.Error("Error generating user")
 		return c.Redirect(Web.CreateUserForm)
 	} else {
-		skek = c.Session["kek"]
+		skek, ok := c.Session["kek"].(string)
+		if ok != true {
+			revel.AppLog.Debug("Error: ", "Type conversion")
+		}
+		revel.AppLog.Debug("Error: ", skek)
 	}
 
 	// create user
@@ -276,15 +280,15 @@ func createUser(username, password, skek string) bool {
 	size := 1024
 	priv, err := rsa.GenerateKey(rand.Reader, size)
 	if err != nil {
-		revel.TRACE.Println("failed to generate key")
+		revel.AppLog.Debug("Debug: ", "failed to generate key")
 	}
 	if bits := priv.N.BitLen(); bits != size {
-		revel.TRACE.Println("key too short (%d vs %d)", bits, size)
+		revel.AppLog.Debug("Debug: ", "key too short (%d vs %d)", bits, size)
 	}
 	pub, err := x509.MarshalPKIXPublicKey(&priv.PublicKey)
 	rsa_public_string := hex.EncodeToString(pub)
 
-	revel.TRACE.Println(priv)
+	revel.AppLog.Debug("Debug: ", priv)
 
 	// encrypt rsa private keypair
 	encrypted_rsa_private := hex.EncodeToString(cryptoWrapper.Encrypt(key, x509.MarshalPKCS1PrivateKey(priv)))

@@ -67,7 +67,7 @@ func (c SyncableObjects) ListDataTypes() revel.Result {
 	var results []map[string]interface{}
 	err = dbc.Find(bson.M{}).All(&results)
 	if err != nil {
-		revel.TRACE.Println(err)
+		revel.AppLog.Debug("Debug: ", err)
 	}
 	
 	return c.Render(results)
@@ -95,7 +95,7 @@ func (c SyncableObjects) CreateObjectForm(object_key string) revel.Result {
 	var result map[string]interface{}
 	err = dbc.Find(bson.M{"object_key" : object_key}).One(&result)
 	if err != nil {
-		revel.TRACE.Println(err)
+		revel.AppLog.Debug("Debug: ", err)
 	}
 	
 	// chrome
@@ -107,7 +107,7 @@ func (c SyncableObjects) CreateObjectForm(object_key string) revel.Result {
 
 func (c SyncableObjects) CreateObjectAction(object_key string) revel.Result {
 	
-	revel.TRACE.Println(c.Params.Values)
+	revel.AppLog.Debug("Debug: ", c.Params.Values)
 
 	// connect to mongodb
 	session, err := mgo.Dial("localhost")
@@ -130,15 +130,15 @@ func (c SyncableObjects) CreateObjectAction(object_key string) revel.Result {
 			key_values[k] = v[0]
 		}
 	}
-	revel.TRACE.Println(key_values)
+	revel.AppLog.Debug("Debug: ", key_values)
 	
 	// convert map to json to string of json
 	key_values_map, err := json.Marshal(key_values)
 	if err != nil {
-		revel.TRACE.Println(err)
+		revel.AppLog.Debug("Debug: ", err)
 	}
 	key_values_string := string(key_values_map[:])
-	revel.TRACE.Println(key_values_string)
+	revel.AppLog.Debug("Debug: ", key_values_string)
 	
 	// create object
 	object_map := make(map[string]interface{})
@@ -149,16 +149,20 @@ func (c SyncableObjects) CreateObjectAction(object_key string) revel.Result {
 
 	if deployment["enc_is_on"] == "True" {
 		// encrypt json string
-		kv_string_encrypted := hex.EncodeToString(cryptoWrapper.Encrypt([]byte(c.Session["kek"]), []byte(key_values_string)))
-		revel.TRACE.Println(kv_string_encrypted)
+		kek_bytearr, ok := c.Session["kek"].([]byte)
+		if ok != true {
+			revel.AppLog.Debug("Error: ", "Type conversion")
+		}
+		kv_string_encrypted := hex.EncodeToString(cryptoWrapper.Encrypt(kek_bytearr, []byte(key_values_string)))
+		revel.AppLog.Debug("Debug: ", kv_string_encrypted)
 		
 		// test decrypt
 		kv_hex, err := hex.DecodeString(kv_string_encrypted)
 		if err != nil {
-			revel.TRACE.Println(err)
+			revel.AppLog.Debug("Debug: ", err)
 		}
-		kv_plain := string(cryptoWrapper.Decrypt([]byte(c.Session["kek"]), kv_hex))
-		revel.TRACE.Println(kv_plain)
+		kv_plain := string(cryptoWrapper.Decrypt(kek_bytearr, kv_hex))
+		revel.AppLog.Debug("Debug: ", kv_plain)
 
 		// add encrypted key-value pairs to the syncable object
 		object_map["key_value_pairs"] = kv_string_encrypted
@@ -193,7 +197,7 @@ func (c SyncableObjects) ViewObject(object_key, uuid string) revel.Result {
 	var schema map[string]interface{}
 	err = schemasdb.Find(bson.M{"object_key": object_key}).One(&schema)
 	if err != nil {
-		revel.TRACE.Println(err)
+		revel.AppLog.Debug("Debug: ", err)
 	}
 	
 	// query objects
@@ -201,9 +205,9 @@ func (c SyncableObjects) ViewObject(object_key, uuid string) revel.Result {
 	var object map[string]string
 	err = dbc.Find(bson.M{"uuid": uuid, "object_type": object_key}).One(&object)
 	if err != nil {
-		revel.TRACE.Println(err)
+		revel.AppLog.Debug("Debug: ", err)
 	}
-	revel.TRACE.Println(object)
+	revel.AppLog.Debug("Debug: ", object)
 	
 	// find the deployment
 	dbd := session.DB("landline").C("Deployments")
@@ -215,10 +219,14 @@ func (c SyncableObjects) ViewObject(object_key, uuid string) revel.Result {
 		// decrypt key_value_pairs
 		kv_hex, err := hex.DecodeString(object["key_value_pairs"])
 		if err != nil {
-			revel.TRACE.Println(err)
+			revel.AppLog.Debug("Debug: ", err)
 		}
-		kv_plain = string(cryptoWrapper.Decrypt([]byte(c.Session["kek"]), kv_hex))
-		revel.TRACE.Println(kv_plain)
+		kek_bytearr, ok := c.Session["kek"].([]byte)
+		if ok != true {
+			revel.AppLog.Debug("Error: ", "Type conversion")
+		}
+		kv_plain = string(cryptoWrapper.Decrypt(kek_bytearr, kv_hex))
+		revel.AppLog.Debug("Debug: ", kv_plain)
 	}
 	
 	// convert string of json to json to map
@@ -246,7 +254,7 @@ func (c SyncableObjects) ListObjects(object_key string) revel.Result {
 	var object_type map[string]interface{}
 	err = dbs.Find(bson.M{"object_key": object_key}).One(&object_type)
 	if err != nil {
-		revel.TRACE.Println(err)
+		revel.AppLog.Debug("Debug: ", err)
 	}
 	
 	
@@ -255,15 +263,15 @@ func (c SyncableObjects) ListObjects(object_key string) revel.Result {
 	var results []map[string]interface{}
 	err = dbc.Find(bson.M{"object_type": object_key}).All(&results)
 	if err != nil {
-		revel.TRACE.Println(err)
+		revel.AppLog.Debug("Debug: ", err)
 	}
 	
-	revel.TRACE.Println(results)
+	revel.AppLog.Debug("Debug: ", results)
 	
 	// decrypt each
 	var object_list []map[string]interface{}
 	for u, result := range results {
-		revel.TRACE.Println(u)
+		revel.AppLog.Debug("Debug: ", u)
 
 		// object that the client does not know about
 		syncable_object_map := make(map[string]interface{})
@@ -280,9 +288,13 @@ func (c SyncableObjects) ListObjects(object_key string) revel.Result {
 			// decrypt
 			kv_hex, err := hex.DecodeString(result["key_value_pairs"].(string))
 			if err != nil {
-				revel.TRACE.Println(err)
+				revel.AppLog.Debug("Debug: ", err)
 			}
-			kv_plain := cryptoWrapper.Decrypt([]byte(c.Session["kek"]), kv_hex)
+			kek_bytearr, ok := c.Session["kek"].([]byte)
+			if ok != true {
+				revel.AppLog.Debug("Error: ", "Type conversion")
+			}
+			kv_plain := cryptoWrapper.Decrypt(kek_bytearr, kv_hex)
 			
 			// unmarshal the json
 			var obj_json map[string]interface{}
